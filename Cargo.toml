@@ -1,0 +1,8 @@
+[package]
+name = "filenameSearcher"
+version = "0.1.0"
+edition = "2021"
+authors = ["aydin.sch@outlook.com"]
+# External dependency for "walkdir": https://crates.io/crates/walkdir
+[dependencies]
+walkdir = "2.5.0"
