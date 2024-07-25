@@ -4,7 +4,7 @@
 
 # To use:
 * If you want to compile the binaries yourself, Rust is required: https://www.rust-lang.org
-* Pre compiled binaries can be found in the target/debug directory
+* Pre compiled binaries is the filenameSearcher.exe file.
 * These binaries *only* work on windows machines! If you want to compile them to macOS / Linux, you need Rust installed and need to compile to that target. For more refer to: https://rust-lang.github.io/rustup/cross-compilation.html
 
 Have fun with this little project :) Hope it is helpful
