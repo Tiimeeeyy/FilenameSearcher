@@ -8,3 +8,6 @@
 * These binaries *only* work on windows machines! If you want to compile them to macOS / Linux, you need Rust installed and need to compile to that target. For more refer to: https://rust-lang.github.io/rustup/cross-compilation.html
 
 Have fun with this little project :) Hope it is helpful
+
+# Update 1:
+I "upgraded" the code by using multithreading with the tokio.rs package (https://tokio.rs). The program is quite fast now, if you know the general area of directories where the files you are looking for are located. I added a timer to the app just for fun and to compare runtimes when searching (for optimization purposes).
