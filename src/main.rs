@@ -1,77 +1,78 @@
 // Imports, for information on WalkDir, please check the Cargo.toml file.
 
 use std::io;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::Path;
+use std::time::Instant;
+
 use walkdir::WalkDir;
 
-/** This function searches the directories, starting from the root_directory variable.
-* It searches for a term, which has to be a full filename and not just a file extension (for example .py would not work, but filename.py would)
-* Searched directories are counted and the number is displayed after the search process is over.
-*/
-fn main() {
-    // Loop, so the program can run multiple times.
+// Use of constants for IO Operations to save memory
+const EXIT_COMMAND: &str = "exit";
+const PROMPT_TERM: &str = "Please Input the file you are searching for (!IMPORTANT! Filenames have to include the filetype (example: .java, .py) and are *not* case sensitive), if you wish to exit the application, simply type 'exit'";
+const PROMPT_DIR: &str = "Enter your Root directory to start the search (format: C:/user/...): ";
+
+// Main function, just loops so the process does not end after one search is completed.
+#[tokio::main]
+async fn main() {
     loop {
-        // Here we read the user input from the console and assign it to the search term variable. If the suer types 'exit' we exit the application.
-        println!("Please Input the file you are searching for (!IMPORTANT! Filenames have to include the filetype (example: .java, .py) and are *not* case sensitive), if you wish to exit the application, simply type 'exit':");
-        io::stdout().flush().unwrap();
-        let mut search_term = String::new();
-        io::stdin().read_line(&mut search_term).unwrap();
-        let search_term = search_term.trim();
-        if search_term.eq_ignore_ascii_case("exit") {
+        let search_term = read_input(PROMPT_TERM);
+        if search_term.eq_ignore_ascii_case(EXIT_COMMAND) {
             break;
         }
-        // We do the same thing for the root directory.
-        print!("Enter your Root directory to start the search (format: C:/user/...): ");
-        io::stdout().flush().unwrap();
-        let mut root_directory = String::new();
-        io::stdin().read_line(&mut root_directory).unwrap();
-        let root_directory = root_directory.trim();
 
-        // Helper variable to store the number of checked directories (not needed but fun).
-        let mut checked_dirs = 0;
-        // Helper List to store all of the
-        let mut found_repos: Vec<String> = Vec::new();
+        let root_dir = read_input(PROMPT_DIR);
+        let start_time = Instant::now();
+        let (checked_dirs, found_repos) = search_files(&root_dir, &search_term).await;
+        let duration = start_time.elapsed();
+        println!("Checked {} directories", checked_dirs);
+        for repo in found_repos {
+            println!("{}", repo);
+        }
+        println!("Search completed in {:.2} seconds", duration.as_secs_f64());
+    }
+}
 
-        // WalkDir "walks" through the directories from the root specified. We iterate over each entry
-        // to find the entry relevant to the search. Each subdirectory is checked (follow_links),
-        // if you wish to disable the functionality, set .follow_links to false.
-        for entry in WalkDir::new(root_directory)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(|e| e.ok())
-        {
-            // We replace "\\" with a normal forward slash, since backslashes are considered escape keys in Rust.
-            // This helps us make sure the algorithm is functioning as intended.
-            let path_str = entry.path().to_string_lossy().replace("\\", "/");
-            // At this point, a directory is already in the process of being so the counter is being updated here.
-            checked_dirs += 1;
-            // We search if our current path contains a .git file.
-            if Path::new(&path_str).join(".git").exists() {
-                // We use WalkDir again, to check all the subfolders of our entry path
-                // The procedure is the same as before, we just use it again to search more extensively.
-                for file_entry in WalkDir::new(entry.path())
-                    .follow_links(true)
-                    .into_iter()
-                    .filter_map(Result::ok)
-                {
-                    // We create a variable filename and set its value to be the file entry in the current path
-                    // Then the filename is compared to the search term. If they are the same it gets added to the found_repos list.
-                    // We do this, so we can check that no directory is displayed / checked twice.
-                    // Then the found path is printed to the console, and the loop gets closed.
-                    if let Some(filename) = file_entry.file_name().to_str() {
-                        if filename.to_lowercase() == search_term.to_lowercase() {
-                            if !found_repos.contains(&path_str) {
-                                found_repos.push(path_str.clone());
-                                println!("{}", file_entry.path().display());
-                            }
-                            break;
+// This function reads user input and prints an in the main defined predefined message to the terminal.
+
+fn read_input(prompt: &str) -> String {
+    println!("{}", prompt);
+    io::stdout().flush().unwrap();
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    input.trim().to_string()
+}
+
+async fn search_files(root_dir: &str, search_term: &str) -> (usize, Vec<String>) {
+    let mut checked_dirs = 0;
+    let mut found_repos = Vec::new();
+    
+    let mut entries = WalkDir::new(root_dir)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(|e| e.ok());
+    
+    while let Some(entry) = entries.next() {
+        let path_str = entry.path().to_string_lossy().replace("\\", "/");
+        checked_dirs += 1;
+        
+        if Path::new(&path_str).join(".git").exists() {
+            let mut file_entries = WalkDir::new(entry.path())
+                .follow_links(true)
+                .into_iter()
+                .filter_map(Result::ok);
+            
+            while let Some(file_entry) = file_entries.next() {
+                if let Some(filename) = file_entry.file_name().to_str() {
+                    if filename.to_lowercase() == search_term.to_lowercase() {
+                        if !found_repos.contains(&path_str) {
+                            found_repos.push(file_entry.path().display().to_string())
                         }
+                        break;
                     }
                 }
             }
         }
-        // Finally, the amount of checked directories is printed (again, this is for fun only
-        println!("Checked {checked_dirs} directories")
     }
+    (checked_dirs, found_repos)
 }
