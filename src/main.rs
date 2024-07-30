@@ -1,13 +1,13 @@
 // Imports, for information on Walk and tokio, please check the Cargo.toml file.
-// This is Version 2 of the FilenameSearcher, it includes multithreading using tokio, to streamline processes. When searching large amounts of directories, the change is unnoticeable, but for smaller amounts, it is a lot faster
-
+// Version 2.1 of the filename searcher. Now ignore::Walk is used to traverse the directories
+// It yields a speed increase from almost 40 seconds to about 2 seconds (going from C:/users/user)
 use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::time::Instant;
-use tokio::{fs, task};
 
 use ignore::Walk;
+use tokio::task;
 
 // Use of constants for IO Operations to save memory
 const EXIT_COMMAND: &str = "exit";
@@ -53,11 +53,14 @@ fn read_input(prompt: &str) -> String {
 }
 
 /** This function checks the directories, going out from the root.
+* Params: root_dir: A string reference to the Root directory to start the search. search_term: The term to be searched for.
+* Returns: A list containing all the directories, in which the filename was found and a counter.
 * It checks if the directory contains a ".git" file (required to check if it's a repository)
 * It checks if that repository contains the required file
     -> If the file is found, it gets added to a list, containing all the Paths that lead to the file (or files with the same name)
 * A counter is updated each time a repository is checked (fun)
-* Returns: A list containing all the directories, in which the filename was found and a counter
+* These tasks are done asynchronously, so we need separate counters for each task that gets spawned
+* At the end the tasks and directories are merged into one and returned
 */
 async fn search_files(root_dir: &str, search_term: &str) -> (usize, Vec<String>) {
     let mut checked_dirs = 0;
