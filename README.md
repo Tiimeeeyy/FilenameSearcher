@@ -10,4 +10,7 @@
 Have fun with this little project :) Hope it is helpful
 
 # Update 1:
-I "upgraded" the code by using multithreading with the tokio.rs package (https://tokio.rs). The program is quite fast now, if you know the general area of directories where the files you are looking for are located. I added a timer to the app just for fun and to compare runtimes when searching (for optimization purposes).
+I "upgraded" the code by using multithreading with the tokio.rs package (https://tokio.rs). The program is quite fast now, if you know the general area of directories where the files you are looking for are located. I added a timer to the app just for fun and to compare runtimes when searching (for optimization purposes). 
+
+# Update 2:
+I changed the Directory traversal from WalkDir to ignore::Walk (https://crates.io/crates/ignore). This yields far better results and is a lot faster (from almost 40 seconds down to 2). Multithreading was changed a bit, since now threads are being spawned for each directory to be checked. Looking at the time it takes to run the code, I don't think optimizing for overhead will yield any good results, but I might implement it in the future.
