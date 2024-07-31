@@ -1,3 +1,5 @@
+mod progress;
+
 // Imports, for information on Walk and tokio, please check the Cargo.toml file.
 // Version 2.1 of the filename searcher. Now ignore::Walk is used to traverse the directories
 // It yields a speed increase from almost 40 seconds to about 2 seconds (going from C:/users/user)
@@ -8,6 +10,7 @@ use std::time::Instant;
 
 use ignore::Walk;
 use tokio::task;
+use crate::progress::Progress;
 
 // Use of constants for IO Operations to save memory
 const EXIT_COMMAND: &str = "exit";
@@ -69,7 +72,7 @@ async fn search_files(root_dir: &str, search_term: &str) -> (usize, Vec<String>)
     let entries = Walk::new(root_dir)
         .filter_map(|e| e.ok())
         .collect::<Vec<_>>();
-
+    let progress = Progress::new(entries.len());
     let tasks: Vec<_> = entries
         .into_iter()
         .map(|entry| {
@@ -79,6 +82,7 @@ async fn search_files(root_dir: &str, search_term: &str) -> (usize, Vec<String>)
                 .to_string_lossy()
                 .replace("\\", "/")
                 .to_string();
+            let progress = progress.clone();
             task::spawn(async move {
                 let mut local_checked_dirs = 0;
                 let mut local_found_repos = Vec::new();
@@ -99,6 +103,7 @@ async fn search_files(root_dir: &str, search_term: &str) -> (usize, Vec<String>)
                         }
                     }
                 }
+                progress.inc().await;
                 (local_checked_dirs, local_found_repos)
             })
         })
@@ -109,5 +114,6 @@ async fn search_files(root_dir: &str, search_term: &str) -> (usize, Vec<String>)
         checked_dirs += local_checked_dirs;
         found_repos.extend(local_found_repos);
     }
+    progress.finish().await;
     (checked_dirs, found_repos)
 }
